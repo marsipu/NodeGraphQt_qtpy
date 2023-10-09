@@ -50,7 +50,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
     node_selected = QtCore.Signal(str)
     node_selection_changed = QtCore.Signal(list, list)
     node_double_clicked = QtCore.Signal(str)
-    data_dropped = QtCore.Signal(QtCore.QMimeData, QtCore.QPoint)
+    data_dropped = QtCore.Signal(QtCore.QMimeData, QtCore.QPointF)
     context_menu_prompt = QtCore.Signal(str, object)
 
     def __init__(self, parent=None, undo_stack=None):
@@ -673,7 +673,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         pos = self.mapToScene(event.pos())
         event.setDropAction(QtCore.Qt.DropAction.CopyAction)
         self.data_dropped.emit(
-            event.mimeData(), QtCore.QPoint(pos.x(), pos.y()))
+            event.mimeData(), QtCore.QPointF(pos.x(), pos.y()))
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat('text/uri-list'):
