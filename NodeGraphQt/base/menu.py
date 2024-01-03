@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import re
-from distutils.version import LooseVersion
+from packaging.version import Version
 
 from qtpy import QtGui, QtCore
 
@@ -141,7 +141,7 @@ class NodeGraphMenu(object):
         """
         action = GraphAction(name, self._graph.viewer())
         action.graph = self._graph
-        if LooseVersion(QtCore.qVersion()) >= LooseVersion('5.10'):
+        if Version(QtCore.qVersion()) >= Version('5.10'):
             action.setShortcutVisibleInContextMenu(True)
 
         if shortcut:
@@ -218,7 +218,7 @@ class NodesMenu(NodeGraphMenu):
 
         action = NodeAction(name, self._graph.viewer())
         action.graph = self._graph
-        if LooseVersion(QtCore.qVersion()) >= LooseVersion('5.10'):
+        if Version(QtCore.qVersion()) >= Version('5.10'):
             action.setShortcutVisibleInContextMenu(True)
 
         if shortcut:
