@@ -87,6 +87,8 @@ class _PropertiesContainer(QtWidgets.QWidget):
         layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         layout.addLayout(self.__layout)
 
+        self.__property_widgets = {}
+
     def __repr__(self):
         return '<{} object at {}>'.format(
             self.__class__.__name__, hex(id(self))
@@ -122,6 +124,7 @@ class _PropertiesContainer(QtWidgets.QWidget):
 
         self.__layout.addWidget(label_widget, row, 0, label_flags)
         self.__layout.addWidget(widget, row, 1)
+        self.__property_widgets[name] = widget
 
     def get_widget(self, name):
         """
@@ -133,10 +136,7 @@ class _PropertiesContainer(QtWidgets.QWidget):
         Returns:
             QtWidgets.QWidget: property widget.
         """
-        for row in range(self.__layout.rowCount()):
-            item = self.__layout.itemAtPosition(row, 1)
-            if item and name == item.widget().toolTip():
-                return item.widget()
+        return self.__property_widgets.get(name)
 
     def get_all_widgets(self):
         """
@@ -145,14 +145,7 @@ class _PropertiesContainer(QtWidgets.QWidget):
         Returns:
             dict: {name: widget}
         """
-        widgets = {}
-        for row in range(self.__layout.rowCount()):
-            item = self.__layout.itemAtPosition(row, 1)
-            if not item:
-                continue
-            name = item.widget().toolTip()
-            widgets[name] = item.widget()
-        return widgets
+        return self.__property_widgets
 
 
 class _PortConnectionsContainer(QtWidgets.QWidget):
@@ -300,13 +293,13 @@ class _PortConnectionsContainer(QtWidgets.QWidget):
             chb_widget.setDisabled(disable)
 
 
-class NodePropWidget(QtWidgets.QWidget):
+class NodePropEditorWidget(QtWidgets.QWidget):
     """
-    Node properties widget for display a Node object.
+    Node properties editor widget for display a Node object.
 
     Args:
         parent (QtWidgets.QWidget): parent object.
-        node (NodeGraphQt.BaseNode): node.
+        node (NodeGraphQt.NodeObject): node.
     """
 
     #: signal (node_id, prop_name, prop_value)
@@ -314,7 +307,7 @@ class NodePropWidget(QtWidgets.QWidget):
     property_closed = QtCore.Signal(str)
 
     def __init__(self, parent=None, node=None):
-        super(NodePropWidget, self).__init__(parent)
+        super(NodePropEditorWidget, self).__init__(parent)
         self.__node_id = node.id
         self.__tab_windows = {}
         self.__tab = QtWidgets.QTabWidget()
@@ -535,6 +528,15 @@ class NodePropWidget(QtWidgets.QWidget):
         self.__tab.addTab(self.__tab_windows[name], name)
         return self.__tab_windows[name]
 
+    def get_tab_widget(self):
+        """
+        Returns the underlying tab widget.
+
+        Returns:
+            QtWidgets.QTabWidget: tab widget.
+        """
+        return self.__tab
+
     def get_widget(self, name):
         """
         get property widget.
@@ -547,10 +549,23 @@ class NodePropWidget(QtWidgets.QWidget):
         """
         if name == 'name':
             return self.name_wgt
-        for tab_name, prop_win in self.__tab_windows.items():
+        for prop_win in self.__tab_windows.values():
             widget = prop_win.get_widget(name)
             if widget:
                 return widget
+
+    def get_all_property_widgets(self):
+        """
+        get all the node property widgets.
+
+        Returns:
+            list[BaseProperty]: property widgets.
+        """
+        widgets = [self.name_wgt]
+        for prop_win in self.__tab_windows.values():
+            for widget in prop_win.get_all_widgets().values():
+                widgets.append(widget)
+        return widgets
 
     def get_port_connection_widget(self):
         """
@@ -716,7 +731,7 @@ class PropertiesBinWidget(QtWidgets.QWidget):
             prop_name (str): node property name.
             prop_value (object): node property value.
         """
-        properties_widget = self.prop_widget(node)
+        properties_widget = self.get_property_editor_widget(node)
         if not properties_widget:
             return
 
@@ -738,6 +753,20 @@ class PropertiesBinWidget(QtWidgets.QWidget):
         """
         if not self._block_signal:
             self.property_changed.emit(node_id, prop_name, prop_value)
+
+    def create_property_editor(self, node):
+        """
+        Creates a new property editor widget from the provided node.
+
+        (re-implement for displaying custom node property editor widget.)
+
+        Args:
+            node (NodeGraphQt.NodeObject): node object.
+
+        Returns:
+            NodePropEditorWidget: property editor widget.
+        """
+        return NodePropEditorWidget(node=node)
 
     def limit(self):
         """
@@ -777,7 +806,7 @@ class PropertiesBinWidget(QtWidgets.QWidget):
 
         self._prop_list.insertRow(0)
 
-        prop_widget = NodePropWidget(node=node)
+        prop_widget = self.create_property_editor(node=node)
         prop_widget.property_closed.connect(self.__on_prop_close)
         prop_widget.property_changed.connect(self.__on_property_widget_changed)
         port_connections = prop_widget.get_port_connection_widget()
@@ -825,15 +854,15 @@ class PropertiesBinWidget(QtWidgets.QWidget):
         """
         self._prop_list.setRowCount(0)
 
-    def prop_widget(self, node):
+    def get_property_editor_widget(self, node):
         """
-        Returns the node property widget.
+        Returns the node property editor widget.
 
         Args:
             node (str or NodeGraphQt.NodeObject): node id or node object.
 
         Returns:
-            NodePropWidget: node property widget.
+            NodePropEditorWidget: node property editor widget.
         """
         node_id = node if isinstance(node, str) else node.id
         itm_find = self._prop_list.findItems(node_id, QtCore.Qt.MatchFlag.MatchExactly)

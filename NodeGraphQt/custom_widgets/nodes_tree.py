@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from qtpy import QtWidgets, QtCore, QtGui
 
-from NodeGraphQt.constants import URN_SCHEME
+from NodeGraphQt.constants import MIME_TYPE, URN_SCHEME
 
 TYPE_NODE = QtWidgets.QTreeWidgetItem.UserType + 1
 TYPE_CATEGORY = QtWidgets.QTreeWidgetItem.UserType + 2
@@ -69,8 +69,8 @@ class NodesTreeWidget(QtWidgets.QTreeWidget):
     def mimeData(self, items):
         node_ids = ['node:{}'.format(i.toolTip(0)) for i in items]
         node_urn = QtCore.QUrl(URN_SCHEME + ';'.join(node_ids))
-        mime_data = super(NodesTreeWidget, self).mimeData(items)
-        mime_data.setUrls([node_urn])
+        mime_data = QtCore.QMimeData()
+        mime_data.setData(MIME_TYPE, QtCore.QByteArray(node_urn.encode()))
         return mime_data
 
     def _build_tree(self):
@@ -95,7 +95,6 @@ class NodesTreeWidget(QtWidgets.QTreeWidget):
             cat_item = _BaseNodeTreeItem(self, [label], type=TYPE_CATEGORY)
             cat_item.setFirstColumnSpanned(True)
             cat_item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled)
-            cat_item.setBackground(0, QtGui.QBrush(palette.midlight().color()))
             cat_item.setSizeHint(0, QtCore.QSize(100, 26))
             self.addTopLevelItem(cat_item)
             cat_item.setExpanded(True)
